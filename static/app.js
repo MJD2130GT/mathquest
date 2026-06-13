@@ -89,11 +89,15 @@
     if (typeof gsap === 'undefined') return;
     const main = app().querySelector('main');
     if (main) gsap.from(main, { opacity: 0, duration: 0.25, ease: 'power1.out' });
-    // 노드 scale-pop 등장
-    gsap.from('.wnode', { scale: 0, opacity: 0, duration: 0.4, stagger: 0.06, ease: 'back.out(2.2)', delay: 0.08 });
+    // 노드 — scale:0 대신 opacity+y 사용 (scale:0이면 stagger 중 노드가 작게/안 보이는 버그 발생)
+    gsap.from('.wnode', {
+      opacity: 0, y: 18, duration: 0.38, stagger: 0.05,
+      ease: 'back.out(1.5)', delay: 0.06,
+      clearProps: 'all',  // 인라인 transform 제거 → CSS :active scale(.94) 복원
+    });
     // 완료 연결선 draw-in (가로 → 세로 순)
-    gsap.from('.mapconn.h.done', { scaleX: 0, duration: 0.42, stagger: 0.1, ease: 'power2.out', transformOrigin: 'left center', delay: 0.55 });
-    gsap.from('.mapconn.v.done', { scaleY: 0, duration: 0.38, stagger: 0.12, ease: 'power2.out', transformOrigin: 'top center', delay: 0.72 });
+    gsap.from('.mapconn.h.done', { scaleX: 0, duration: 0.4, stagger: 0.09, ease: 'power2.out', transformOrigin: 'left center', delay: 0.52, clearProps: 'transform' });
+    gsap.from('.mapconn.v.done', { scaleY: 0, duration: 0.36, stagger: 0.11, ease: 'power2.out', transformOrigin: 'top center', delay: 0.68, clearProps: 'transform' });
   }
 
   function spawnParts(target, emoji, n) {
