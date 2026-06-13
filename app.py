@@ -523,6 +523,55 @@ def redeem():
     return jsonify({"ok": True, "status": "redeemed", "voucher": voucher, "redeemed_at": today})
 
 
+# ---------- 랭킹 ----------
+
+@app.get("/api/ranking")
+def ranking():
+    uid = current_uid()
+    if uid is None:
+        return err("로그인이 필요해요.", 401)
+    conn = db()
+    rows = conn.execute(
+        """SELECT u.id, u.nickname, u.xp,
+                  COALESCE(SUM(p.stars), 0) AS total_stars
+           FROM users u
+           LEFT JOIN progress p ON p.user_id = u.id
+           GROUP BY u.id
+           ORDER BY u.xp DESC, u.id ASC
+           LIMIT 50"""
+    ).fetchall()
+    result = []
+    for i, r in enumerate(rows):
+        result.append({
+            "rank": i + 1,
+            "nickname": r["nickname"],
+            "xp": r["xp"],
+            "total_stars": int(r["total_stars"]),
+            "is_me": r["id"] == uid,
+        })
+    # 본인이 50위 밖이면 별도로 추가
+    me_in_top = any(r["is_me"] for r in result)
+    my_rank = None
+    if not me_in_top:
+        row = conn.execute(
+            """SELECT COUNT(*) + 1 AS rank_pos,
+                      (SELECT nickname FROM users WHERE id=?) AS nickname,
+                      (SELECT xp FROM users WHERE id=?) AS xp,
+                      COALESCE((SELECT SUM(stars) FROM progress WHERE user_id=?), 0) AS total_stars
+               FROM users WHERE xp > (SELECT xp FROM users WHERE id=?)""",
+            (uid, uid, uid, uid),
+        ).fetchone()
+        if row:
+            my_rank = {
+                "rank": row["rank_pos"],
+                "nickname": row["nickname"],
+                "xp": row["xp"],
+                "total_stars": int(row["total_stars"]),
+                "is_me": True,
+            }
+    return jsonify({"ranking": result, "my_rank": my_rank})
+
+
 # ---------- 학부모 리포트 ----------
 
 @app.get("/api/report")

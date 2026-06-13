@@ -748,3 +748,37 @@ main { animation: pagein 0.18s ease-out; }
 .dq-btn:active { transform: scale(.94); }
 .dq-done { font-size: 13px; font-weight: 800; color: #16a34a; flex-shrink: 0; }
 .dq-lock { font-size: 12px; color: #94a3b8; font-weight: 700; flex-shrink: 0; }
+
+/* ===== 랭킹 ===== */
+.rank-mycard {
+  display: flex; align-items: center; gap: 10px;
+  background: linear-gradient(135deg, rgba(251,191,36,.25), rgba(249,115,22,.2));
+  border: 1.5px solid rgba(251,191,36,.6); border-radius: 16px;
+  padding: 12px 16px; margin-bottom: 14px; color: #fff;
+}
+.rank-mycard span { font-size: 13px; opacity: .85; }
+.rank-mycard b { font-size: 22px; font-weight: 900; color: #fbbf24; margin: 0 4px; }
+.rank-list { display: flex; flex-direction: column; gap: 8px; }
+.rank-row {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(255,255,255,.92); border-radius: 14px;
+  padding: 11px 14px;
+  transition: transform .1s;
+}
+.rank-row:active { transform: scale(.98); }
+.rank-row.rank-me {
+  background: linear-gradient(135deg, #fef9c3, #fef3c7);
+  border: 2px solid #fbbf24;
+  box-shadow: 0 0 12px rgba(251,191,36,.35);
+}
+.rank-medal { font-size: 26px; flex-shrink: 0; min-width: 34px; text-align: center; }
+.rank-num-plain {
+  display: inline-block; min-width: 34px; text-align: center;
+  font-size: 15px; font-weight: 900; color: #64748b;
+}
+.rank-info { flex: 1; min-width: 0; }
+.rank-info b { font-size: 14px; color: #1e293b; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-sub { font-size: 11px; color: #64748b; font-weight: 600; }
+.rank-right { text-align: right; flex-shrink: 0; }
+.rank-xp { display: block; font-size: 13px; font-weight: 800; color: #92400e; }
+.rank-stars { font-size: 12px; color: #d97706; font-weight: 700; }

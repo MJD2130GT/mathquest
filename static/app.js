@@ -121,6 +121,7 @@
       ["map", "🗺️", "모험"],
       ["shop", "🎁", "상점"],
       ["wallet", "👛", "지갑"],
+      ["rank", "🏆", "랭킹"],
       ["dash", "📊", "기록"],
       ["report", "👨‍👩‍👧", "학부모"],
     ];
@@ -909,6 +910,50 @@
     if (stars === 3) setTimeout(spawnConfetti, 650);
   }
 
+  // ---------- 화면: 랭킹 ----------
+  async function renderRanking() {
+    let data;
+    try { data = await api("ranking"); }
+    catch (e) {
+      if (e.status === 401) { renderAuth("login"); return; }
+      app().innerHTML = `${header()}<main class="scroll"><p class="repmsg">${esc(e.message)}</p></main>${nav("rank")}`;
+      return;
+    }
+    const medals = ["🥇", "🥈", "🥉"];
+    const rowHtml = (r) => {
+      const lv = levelOf(r.xp);
+      const medal = r.rank <= 3 ? medals[r.rank - 1] : `<span class="rank-num-plain">${r.rank}</span>`;
+      return `<div class="rank-row${r.is_me ? " rank-me" : ""}">
+        <span class="rank-medal">${medal}</span>
+        <div class="rank-info">
+          <b>${esc(r.nickname)}</b>
+          <span class="rank-sub">${titleOf(lv)} · Lv.${lv}</span>
+        </div>
+        <div class="rank-right">
+          <span class="rank-xp">${won(r.xp)} XP</span>
+          <span class="rank-stars">★${r.total_stars}</span>
+        </div>
+      </div>`;
+    };
+    const listHtml = data.ranking.length
+      ? data.ranking.map(rowHtml).join("")
+      : `<div class="walletempty"><div class="big-emoji">🏆</div><p>아직 플레이어가 없어요.</p></div>`;
+    const myRankCard = data.my_rank
+      ? `<div class="rank-mycard">
+           <span>내 순위</span>
+           <b>${data.my_rank.rank}위</b>
+           <span>${won(data.my_rank.xp)} XP · ★${data.my_rank.total_stars}</span>
+         </div>`
+      : "";
+    app().innerHTML = `${header()}
+      <main class="scroll">
+        <h2 class="sect">🏆 명예의 전당</h2>
+        ${myRankCard}
+        <div class="rank-list">${listHtml}</div>
+      </main>${nav("rank")}`;
+    animateXpBar();
+  }
+
   // ---------- 화면: 학생 대시보드 ----------
   function renderDash() {
     const u = S.user;
@@ -1181,6 +1226,7 @@
     if (id === "map") renderMap();
     else if (id === "shop") renderShop();
     else if (id === "wallet") renderWallet();
+    else if (id === "rank") renderRanking();
     else if (id === "dash") renderDash();
     else if (id === "report") renderReport();
   }
