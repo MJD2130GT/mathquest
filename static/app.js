@@ -76,6 +76,25 @@
       bar.style.cssText = `width:${targetW};transition:width 0.95s cubic-bezier(0.34,1.1,0.64,1)`;
     }));
   }
+  function pageEntrance(staggerSel) {
+    if (typeof gsap === 'undefined') return;
+    const main = app().querySelector('main');
+    if (main) gsap.from(main, { opacity: 0, y: 20, duration: 0.3, ease: 'power2.out' });
+    if (staggerSel) {
+      const items = app().querySelectorAll(staggerSel);
+      if (items.length) gsap.from(items, { opacity: 0, y: 24, duration: 0.3, stagger: 0.055, ease: 'back.out(1.3)', delay: 0.08 });
+    }
+  }
+  function animateMapEntrance() {
+    if (typeof gsap === 'undefined') return;
+    const main = app().querySelector('main');
+    if (main) gsap.from(main, { opacity: 0, duration: 0.25, ease: 'power1.out' });
+    // 노드 scale-pop 등장
+    gsap.from('.wnode', { scale: 0, opacity: 0, duration: 0.4, stagger: 0.06, ease: 'back.out(2.2)', delay: 0.08 });
+    // 완료 연결선 draw-in (가로 → 세로 순)
+    gsap.from('.mapconn.h.done', { scaleX: 0, duration: 0.42, stagger: 0.1, ease: 'power2.out', transformOrigin: 'left center', delay: 0.55 });
+    gsap.from('.mapconn.v.done', { scaleY: 0, duration: 0.38, stagger: 0.12, ease: 'power2.out', transformOrigin: 'top center', delay: 0.72 });
+  }
 
   function spawnParts(target, emoji, n) {
     if (!target) return;
@@ -257,6 +276,7 @@
       </main>${nav("map")}`;
     loadDailyQuests();
     animateXpBar();
+    animateMapEntrance();
   }
 
   async function loadDailyQuests() {
@@ -283,6 +303,9 @@
           <div class="daily-head">📅 오늘의 도전${allClaimed ? " <span class='dq-alldone'>모두 완료! 🎉</span>" : ""}</div>
           ${rows}
         </div>`;
+      if (typeof gsap !== 'undefined') {
+        gsap.from(area.querySelector('.daily-card'), { y: -22, opacity: 0, duration: 0.42, ease: 'back.out(1.5)' });
+      }
     } catch (e) { /* 오프라인이면 숨김 */ }
   }
 
@@ -324,6 +347,7 @@
         <div class="stages">${rows}</div>
       </main>${nav("map")}`;
     animateXpBar();
+    pageEntrance('.stage');
   }
 
   function play(w, s) {
@@ -924,10 +948,10 @@
     <main class="result${stars === 3 ? " star3" : ""}" style="--wc:${meta.color}">
       <div class="rescard">
         <div class="resstars" id="resstars">${[1, 2, 3].map((i) =>
-          `<span class="rstar ${i <= stars ? "on" : ""}" style="animation-delay:${i * 0.25}s">★</span>`).join("")}</div>
+          `<span class="rstar ${i <= stars ? "on" : ""}">★</span>`).join("")}</div>
         <h2>${worldDone ? `World ${w} 정복! 🏆` : "스테이지 클리어!"}</h2>
         ${accPct !== null ? `<p class="resacc">정답률 ${accPct}%</p>` : `<p class="resacc">개념 탐구 완료!</p>`}
-        <p class="resxp">+${xp} XP</p>
+        <p class="resxp" id="res-xp">+0 XP</p>
         ${worldDone && w < 10 ? `<p class="unlock">🔓 World ${w + 1} ${MQ.WORLDS[w].name} 잠금 해제!</p>` : ""}
         ${worldDone && w === 10 ? `<p class="unlock">👑 수학의 대륙을 모두 정복했어! 넌 진짜 전설이야!</p>` : ""}
         ${nextOpen ? `<button class="big primary" onclick="UI.play(${w},${s + 1})">다음 스테이지 ▶</button>` : ""}
@@ -936,13 +960,56 @@
         <button class="big ghost" onclick="UI.go('map')">월드 맵</button>
       </div>
     </main>`;
-    // 별마다 파티클 터짐
-    [1, 2, 3].forEach((i) => {
-      if (i <= stars) {
-        setTimeout(() => spawnParts($(`.rstar:nth-child(${i})`), "⭐", 6), i * 250 + 300);
-      }
-    });
-    if (stars === 3) setTimeout(spawnConfetti, 650);
+
+    if (typeof gsap !== 'undefined') {
+      const tl = gsap.timeline();
+
+      // 1. 카드 슬라이드인
+      tl.from('.rescard', { y: 60, opacity: 0, duration: 0.5, ease: 'back.out(1.6)' });
+
+      // 2. 별 스탬프 — 하나씩 도장 찍히듯 + 파티클
+      tl.addLabel('stars', '+=0.12');
+      const starEls = document.querySelectorAll('.rstar.on');
+      starEls.forEach((star, i) => {
+        tl.from(star, {
+          scale: 0, rotation: -50, duration: 0.42, ease: 'back.out(2.8)',
+          onStart: () => {
+            Sound.play('correct');
+            spawnParts(star, '⭐', 6);
+          },
+        }, `stars+=${i * 0.28}`);
+      });
+
+      // 3. 3성이면 confetti
+      if (stars === 3) tl.add(() => spawnConfetti(), `stars+=${3 * 0.28}`);
+
+      // 4. XP 카운터 — 0에서 목표까지
+      tl.add(() => {
+        const el = document.getElementById('res-xp');
+        if (!el) return;
+        const obj = { val: 0 };
+        gsap.to(obj, {
+          val: xp, duration: 1.3, ease: 'power2.out',
+          onUpdate: () => { el.textContent = '+' + Math.round(obj.val) + ' XP'; },
+        });
+      }, `stars+=${stars * 0.28 + 0.05}`);
+
+      // 5. 버튼들 아래서 순서대로 등장
+      tl.from('.rescard .big', {
+        y: 20, opacity: 0, duration: 0.3, stagger: 0.1, ease: 'power2.out',
+      }, `stars+=${stars * 0.28 + 0.12}`);
+
+    } else {
+      // GSAP 미로드 시 fallback
+      const el = document.getElementById('res-xp');
+      if (el) el.textContent = '+' + xp + ' XP';
+      [1, 2, 3].forEach((i) => {
+        if (i <= stars) {
+          setTimeout(() => spawnParts(document.querySelector(`.rstar:nth-child(${i})`), '⭐', 6), i * 250 + 300);
+        }
+      });
+      if (stars === 3) setTimeout(spawnConfetti, 650);
+    }
   }
 
   // ---------- 화면: 랭킹 ----------
@@ -987,6 +1054,7 @@
         <div class="rank-list">${listHtml}</div>
       </main>${nav("rank")}`;
     animateXpBar();
+    pageEntrance('.rank-row');
   }
 
   // ---------- 화면: 학생 대시보드 ----------
@@ -1025,6 +1093,7 @@
         <button class="big ghost logout" onclick="UI.logout()">로그아웃</button>
       </main>${nav("dash")}`;
     animateXpBar();
+    pageEntrance('.mini, .wrow, .badge');
   }
   function computeBadges(totalStars, lv) {
     const anyClear = Object.keys(S.progress).length > 0;
@@ -1091,6 +1160,7 @@
           }</p>
         </div>
       </main>${nav("report")}`;
+    pageEntrance('.repcard');
   }
 
   // ---------- 공용 모달 ----------
@@ -1103,9 +1173,26 @@
     back.querySelectorAll("button[data-i]").forEach((btn) => {
       btn.onclick = () => buttons[+btn.dataset.i].fn(back);
     });
+    if (typeof gsap !== 'undefined') {
+      gsap.from(back, { opacity: 0, duration: 0.22, ease: 'power1.out' });
+      const card = back.querySelector('.ovlcard');
+      if (card) gsap.from(card, { scale: 0.72, y: 22, opacity: 0, duration: 0.4, ease: 'back.out(2.4)' });
+    }
     return back;
   }
-  function closeModal(el) { if (el && el.parentNode) el.parentNode.removeChild(el); }
+  function closeModal(el) {
+    if (!el || !el.parentNode) return;
+    if (typeof gsap !== 'undefined') {
+      const card = el.querySelector('.ovlcard');
+      if (card) {
+        gsap.to(el, { opacity: 0, duration: 0.2, ease: 'power1.in' });
+        gsap.to(card, { scale: 0.84, opacity: 0, duration: 0.18, ease: 'power2.in',
+          onComplete: () => { if (el.parentNode) el.parentNode.removeChild(el); } });
+        return;
+      }
+    }
+    el.parentNode.removeChild(el);
+  }
 
   function showLevelUpModal(lv) {
     Sound.play("worldClear");
@@ -1118,6 +1205,20 @@
       [{ label: "계속 모험하기 ✨", cls: "primary", fn: (b) => closeModal(b) }]
     );
     m.classList.add("lvup-ovl");
+
+    if (typeof gsap !== 'undefined') {
+      const tl = gsap.timeline();
+      // 모달 카드 spring 입장
+      tl.from('.lvup-ovl .ovlcard', { scale: 0.45, opacity: 0, duration: 0.5, ease: 'back.out(2)' })
+        // 배지 — 회전 폭발
+        .from('.lvup-badge', { scale: 0, rotation: -220, duration: 0.7, ease: 'elastic.out(1, 0.45)' }, '-=0.1')
+        // 레벨 숫자 — bounce
+        .from('.lvup-lv', { scale: 0, duration: 0.55, ease: 'back.out(3)' }, '-=0.35')
+        // 나머지 텍스트·버튼 순차 등장
+        .from(['.lvup-title', '.lvup-rank', '.lvup-ovl .ovlcard .big'], {
+          y: 22, opacity: 0, stagger: 0.1, duration: 0.35, ease: 'power2.out',
+        }, '-=0.25');
+    }
   }
 
   // ---------- 화면: 리워드 상점 ----------
@@ -1165,6 +1266,7 @@
         <h2 class="sect">🎁 리워드 상점</h2>
         ${cats}
       </main>${nav("shop")}`;
+    pageEntrance('.shopitem');
   }
   function buy(id) {
     const it = S.catalog && S.catalog[id];
@@ -1229,6 +1331,7 @@
         <h2 class="sect">👛 내 지갑</h2>
         <div class="walletlist">${list}</div>
       </main>${nav("wallet")}`;
+    pageEntrance('.walletitem');
   }
   function redeem(id) {
     modal(`<div class="big-emoji">🎟️</div><b>이 보상을 교환할까요?</b>
@@ -1257,13 +1360,23 @@
     S.user = null;
     renderAuth("login");
   }
-  function go(id) {
+  function navigate(id) {
     if (id === "map") renderMap();
     else if (id === "shop") renderShop();
     else if (id === "wallet") renderWallet();
     else if (id === "rank") renderRanking();
     else if (id === "dash") renderDash();
     else if (id === "report") renderReport();
+  }
+  function go(id) {
+    if (typeof gsap !== 'undefined') {
+      const cur = app().querySelector('main, .auth');
+      if (cur) {
+        gsap.to(cur, { opacity: 0, y: -10, duration: 0.15, ease: 'power1.in', onComplete: () => navigate(id) });
+        return;
+      }
+    }
+    navigate(id);
   }
 
   // ---------- 전역 노출 & 부팅 ----------

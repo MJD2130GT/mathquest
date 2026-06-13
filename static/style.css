@@ -170,11 +170,12 @@ button { font-family: inherit; border: 0; cursor: pointer; }
 .ovl {
   position: fixed; inset: 0; background: rgba(15,23,42,.55); z-index: 50;
   display: flex; align-items: center; justify-content: center; padding: 26px;
+  backdrop-filter: blur(3px);
 }
 .ovlcard {
   background: #fff; border-radius: 22px; padding: 26px 22px; width: 100%; max-width: 400px;
-  text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,.4);
-  animation: pop .25s ease-out;
+  text-align: center;
+  box-shadow: 0 24px 60px rgba(0,0,0,.45), 0 6px 18px rgba(0,0,0,.22);
 }
 @keyframes pop { from { transform: scale(.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .big-emoji { font-size: 50px; margin-bottom: 6px; }
@@ -196,7 +197,7 @@ button { font-family: inherit; border: 0; cursor: pointer; }
 .rescard { background: #fff; border-radius: 24px; padding: 32px 26px; width: 100%; text-align: center; box-shadow: 0 14px 36px rgba(0,0,0,.3); border-top: 6px solid var(--wc); }
 .resstars { font-size: 52px; letter-spacing: 6px; margin-bottom: 6px; }
 .rstar { color: #e2e8f0; display: inline-block; }
-.rstar.on { color: #fbbf24; animation: starin .5s back ease-out; animation-fill-mode: backwards; }
+.rstar.on { color: #fbbf24; }
 @keyframes starin { from { transform: scale(0) rotate(-40deg); } 60% { transform: scale(1.35); } to { transform: scale(1); } }
 .rescard h2 { color: #1e293b; margin-bottom: 4px; }
 .resacc { color: #64748b; font-weight: 700; }
@@ -609,9 +610,18 @@ button { font-family: inherit; border: 0; cursor: pointer; }
 .bottomnav .navbtn { font-size: 11px; }
 .bottomnav .nico { font-size: 20px; }
 
-/* ===== 화면 전환 페이드인 ===== */
-main { animation: pagein 0.18s ease-out; }
-@keyframes pagein { from { opacity: 0; transform: translateY(7px); } }
+/* ===== 화면 전환 — GSAP 처리 (pagein CSS 제거) ===== */
+
+/* ===== FEVER 배너 ===== */
+.fever-banner {
+  position: absolute;
+  top: 45%; left: 0; right: 0;
+  text-align: center; z-index: 20;
+  font-size: 38px; font-weight: 900; color: #fff;
+  text-shadow: 0 0 18px #e879f9, 0 0 36px rgba(232,121,249,.6);
+  pointer-events: none; white-space: nowrap; letter-spacing: 4px;
+}
+#bx-overlay .ovlcard { animation: none; }
 
 /* ===== 선택지 버튼 리플/펄스 ===== */
 .choice { position: relative; overflow: hidden; }
@@ -708,7 +718,7 @@ main { animation: pagein 0.18s ease-out; }
 }
 
 /* ===== 레벨업 모달 ===== */
-.lvup-ovl .ovlcard { background: linear-gradient(160deg, #312e81, #4c1d95); color: #fff; }
+.lvup-ovl .ovlcard { background: linear-gradient(160deg, #312e81, #4c1d95); color: #fff; animation: none; }
 .lvup-badge { font-size: 56px; animation: lvbounce .7s cubic-bezier(.34,1.56,.64,1); display: block; }
 @keyframes lvbounce { from { transform: scale(0) rotate(-30deg); } }
 .lvup-title { font-size: 15px; font-weight: 800; opacity: .85; margin: 4px 0; letter-spacing: 1px; }

@@ -211,6 +211,8 @@
     else this.tweens.add({ targets: this.playerBar.fill, scaleX: frac, duration: 350, ease: 'Cubic.out' });
   };
   BattleScene.prototype.setCombo = function (n) {
+    var prev = this._lastCombo || 0;
+    this._lastCombo = n;
     Sound.setCombo(n);
     Sound.setFever(n >= 8);
     var label = '', color = '#fbbf24';
@@ -227,6 +229,17 @@
     if (wrap) {
       if (n >= 8) { wrap.classList.add('fever'); }
       else        { wrap.classList.remove('fever'); }
+    }
+    // FEVER 진입 배너 (콤보가 처음 8에 도달할 때만)
+    if (n >= 8 && prev < 8 && typeof gsap !== 'undefined' && dom.wrap) {
+      var banner = document.createElement('div');
+      banner.className = 'fever-banner';
+      banner.textContent = '🌟 FEVER!';
+      dom.wrap.appendChild(banner);
+      gsap.timeline()
+        .from(banner, { scale: 2.8, opacity: 0, duration: 0.42, ease: 'back.out(1.6)' })
+        .to(banner, { opacity: 0, y: -50, duration: 0.38, delay: 0.55,
+          onComplete: function () { if (banner.parentNode) banner.parentNode.removeChild(banner); } });
     }
   };
   BattleScene.prototype.setBossTimer = function (frac, danger, instant) {
@@ -434,7 +447,11 @@
   }
   function updateQuestion() {
     dom.qtext.innerHTML = B.q.text;
-    dom.bubble.classList.remove('pop'); void dom.bubble.offsetWidth; dom.bubble.classList.add('pop');
+    if (typeof gsap !== 'undefined') {
+      gsap.from(dom.bubble, { scale: 0.88, opacity: 0.5, duration: 0.28, ease: 'back.out(2)' });
+    } else {
+      dom.bubble.classList.remove('pop'); void dom.bubble.offsetWidth; dom.bubble.classList.add('pop');
+    }
     renderChoices();
     updateHUD();
   }
@@ -445,6 +462,11 @@
       b.onclick = function () { answer(i, b); };
       dom.choices.appendChild(b);
     });
+    if (typeof gsap !== 'undefined') {
+      gsap.from(dom.choices.querySelectorAll('.choice'), {
+        y: 28, opacity: 0, duration: 0.28, stagger: 0.07, ease: 'back.out(1.6)',
+      });
+    }
   }
   function lockChoices() {
     dom.choices.querySelectorAll('.choice').forEach(function (b) { b.disabled = true; });
@@ -465,6 +487,10 @@
     dom.overlay.querySelectorAll('button[data-i]').forEach(function (btn) {
       btn.onclick = buttons[+btn.dataset.i].fn;
     });
+    if (typeof gsap !== 'undefined') {
+      var ovlCard = dom.overlay.querySelector('.ovlcard');
+      if (ovlCard) gsap.from(ovlCard, { scale: 0.72, opacity: 0, duration: 0.32, ease: 'back.out(2.2)' });
+    }
   }
   function clearPopup() { dom.overlay.innerHTML = ''; }
 
