@@ -27,6 +27,20 @@
   ];
   var QUIZMON = { emoji: '🦉', name: '퀴즈 부엉이 현자' };
 
+  // 월드별 파티클 테마 (color, size, 방향: -1=위, +1=아래)
+  var PARTICLE_THEMES = [
+    { color: 0x38bdf8, size: 3, dir: -1 },  // W1 🌊 바다 거품
+    { color: 0xf97316, size: 4, dir: -1 },  // W2 🌋 불씨
+    { color: 0x94a3b8, size: 2, dir: -1 },  // W3 ⚙️ 기어 파편
+    { color: 0xbae6fd, size: 3, dir:  1 },  // W4 ❄️ 눈송이 (아래로)
+    { color: 0xfde047, size: 2, dir: -1 },  // W5 ⚡ 번개 스파크
+    { color: 0x4ade80, size: 3, dir: -1 },  // W6 🌿 잎사귀
+    { color: 0xfbbf24, size: 4, dir: -1 },  // W7 🏜️ 모래
+    { color: 0xc4b5fd, size: 3, dir: -1 },  // W8 🌙 달빛
+    { color: 0xf472b6, size: 3, dir: -1 },  // W9 🌈 무지개
+    { color: 0xfbbf24, size: 5, dir: -1 },  // W10 🏆 황금 별
+  ];
+
   // ----- 색 유틸 -----
   function hexInt(h) { return parseInt(String(h).replace('#', ''), 16) || 0x6d28d9; }
   function shade(c, f) {
@@ -53,13 +67,16 @@
 
   BattleScene.prototype.create = function () {
     var c = this.cfg;
+    var self = this;
     this.wc = hexInt(c.color);
     this.bg = this.add.graphics();
 
-    // 은은하게 떠다니는 입자(분위기)
+    // 월드별 테마 파티클
+    var pt = PARTICLE_THEMES[Math.min(c.world - 1, 9)];
+    this._ptDir = pt.dir;
     this.motes = [];
-    for (var i = 0; i < 7; i++) {
-      var m = this.add.circle(0, 0, 3 + Math.random() * 4, 0xffffff, 0.10);
+    for (var i = 0; i < 10; i++) {
+      var m = this.add.circle(0, 0, pt.size + Math.random() * 3, pt.color, 0.14);
       this.motes.push(m);
     }
 
@@ -85,7 +102,34 @@
 
     this.layoutAll(this.scale.gameSize);
     this.scale.on('resize', this.layoutAll, this);
-    this.startIdle();
+
+    // 몬스터 등장 애니메이션 (위에서 낙하)
+    this.monster.setAlpha(0).setScale(0.4).setY(-120);
+    this.tweens.add({
+      targets: this.monster, y: this.monBaseY, alpha: 1, scaleX: 1, scaleY: 1,
+      duration: 620, ease: 'Back.out', delay: 180,
+      onComplete: function () { self.startIdle(); },
+    });
+
+    // 보스 인트로: 화면 플래시 + 강한 진동
+    if (c.isBoss) {
+      var W = this.scale.width, H = this.scale.height;
+      var introFlash = this.add.rectangle(W / 2, H / 2, W, H, 0xffffff, 0);
+      this.tweens.add({ targets: introFlash, alpha: 0.9, duration: 70, yoyo: true,
+        onComplete: function () { introFlash.destroy(); } });
+      this.cameras.main.shake(380, 0.02);
+
+      // 주기적 번개 플래시
+      this.time.addEvent({
+        delay: 3200, loop: true,
+        callback: function () {
+          if (!self.cameras) return;
+          var lf = self.add.rectangle(self.W / 2, self.H / 2, self.W, self.H, 0x8899ff, 0);
+          self.tweens.add({ targets: lf, alpha: 0.18, duration: 55, yoyo: true, repeat: 1,
+            onComplete: function () { lf.destroy(); } });
+        },
+      });
+    }
 
     this.ready = true;
     if (typeof c.onReady === 'function') c.onReady(this);
@@ -105,13 +149,18 @@
     this.bg.fillStyle(this.wc, 0.18);
     this.bg.fillEllipse(cx, H * 0.30, W * 0.9, H * 0.34);
 
+    var ptDir = this._ptDir != null ? this._ptDir : -1;
     for (var i = 0; i < this.motes.length; i++) {
       var m = this.motes[i];
       if (!m._tw) {
-        m.setPosition(Math.random() * W, Math.random() * H);
-        m._tw = this.tweens.add({ targets: m, y: '-=' + (H * 0.5), alpha: 0,
-          duration: 4000 + Math.random() * 3000, repeat: -1, delay: Math.random() * 3000,
-          onRepeat: function (tw, t) { t.x = Math.random() * W; t.y = H + 10; t.alpha = 0.12; } });
+        m.setPosition(Math.random() * W, ptDir === -1 ? Math.random() * H : Math.random() * H);
+        var yDelta = ptDir === -1 ? '-=' + (H * 0.55) : '+=' + (H * 0.55);
+        var resetY = ptDir === -1 ? H + 10 : -10;
+        m._tw = this.tweens.add({
+          targets: m, y: yDelta, alpha: 0,
+          duration: 3800 + Math.random() * 3000, repeat: -1, delay: Math.random() * 2800,
+          onRepeat: function (tw, t) { t.y = resetY; t.alpha = 0.14; },
+        });
       }
     }
 
@@ -144,9 +193,16 @@
 
   BattleScene.prototype.setEnemyHp = function (frac, instant) {
     this._eHp = frac = Math.max(0, Math.min(1, frac));
-    var w = this.enemyBar.maxW * frac;
     if (instant) this.enemyBar.fill.scaleX = frac;
     else this.tweens.add({ targets: this.enemyBar.fill, scaleX: frac, duration: 400, ease: 'Cubic.out' });
+    // 보스 분노 모드: 적 HP 30% 이하
+    if (this.cfg.isBoss) {
+      var wrap = document.getElementById('bwrap');
+      if (wrap) {
+        if (frac > 0 && frac <= 0.3) wrap.classList.add('rage');
+        else wrap.classList.remove('rage');
+      }
+    }
   };
   BattleScene.prototype.setPlayerHp = function (frac, instant) {
     this._pHp = frac = Math.max(0, Math.min(1, frac));
@@ -193,6 +249,9 @@
     this.tweens.add({ targets: this.monster, x: this.monster.x + 14, duration: 70, yoyo: true, repeat: 2 });
     var flash = this.add.circle(this.monster.x, this.monster.y, 54, 0xffffff, 0.7);
     this.tweens.add({ targets: flash, alpha: 0, scale: 1.6, duration: 260, onComplete: function () { flash.destroy(); } });
+    // 빨간 틴트
+    this.monster.setTint(0xff7777);
+    this.time.delayedCall(260, function () { if (self.monster && self.monster.active) self.monster.clearTint(); });
   };
 
   BattleScene.prototype.monsterAttack = function () {
@@ -216,6 +275,19 @@
     this.cameras.main.shake(300, 0.01);
     this.tweens.add({ targets: this.monster, angle: 110, y: this.monBaseY + 90, scale: 0.5, alpha: 0,
       duration: 850, ease: 'Quad.in' });
+    // 파편 debris
+    var debrisEmoji = ['💥', '⚡', '✨', '💫', '🌟'];
+    for (var i = 0; i < 5; i++) {
+      var d = this.add.text(this.monster.x, this.monster.y, debrisEmoji[i], {
+        fontFamily: EMOJI_FONT, fontSize: '22px' }).setOrigin(0.5);
+      var ang = (Math.PI * 2 / 5) * i;
+      this.tweens.add({ targets: d,
+        x: d.x + Math.cos(ang) * 85, y: d.y + Math.sin(ang) * 85,
+        alpha: 0, scale: 0.2, angle: Math.random() * 240 - 120,
+        duration: 720, ease: 'Quad.out',
+        onComplete: function (tw, ts) { ts[0].destroy(); },
+      });
+    }
   };
 
   BattleScene.prototype.floatXp = function (txt) {
@@ -326,6 +398,9 @@
     if (scene) { scene.scale.off('resize', scene.layoutAll, scene); }
     if (Battle.game) { var g = Battle.game; Battle.game = null; scene = null; try { g.destroy(true); } catch (e) {} }
     if (dom.wrap && dom.wrap.parentNode) dom.wrap.parentNode.removeChild(dom.wrap);
+    // DOM 클래스 정리
+    var wrap = document.getElementById('bwrap');
+    if (wrap) { wrap.classList.remove('fever'); wrap.classList.remove('rage'); }
     Sound.startBgm('menu');
     B = null;
   }

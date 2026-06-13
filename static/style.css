@@ -608,6 +608,91 @@ button { font-family: inherit; border: 0; cursor: pointer; }
 .bottomnav .navbtn { font-size: 11px; }
 .bottomnav .nico { font-size: 20px; }
 
+/* ===== 화면 전환 페이드인 ===== */
+main { animation: pagein 0.18s ease-out; }
+@keyframes pagein { from { opacity: 0; transform: translateY(7px); } }
+
+/* ===== 선택지 버튼 리플/펄스 ===== */
+.choice { position: relative; overflow: hidden; }
+.choice.good::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(circle, rgba(74,222,128,.75) 0%, transparent 70%);
+  animation: rippleout 0.45s ease-out forwards;
+}
+@keyframes rippleout { from { transform: scale(0); opacity: 1; } to { transform: scale(2.6); opacity: 0; } }
+.choice.bad { animation: badpulse 0.38s ease-out; }
+@keyframes badpulse {
+  20% { transform: scale(1.06) rotate(-1.5deg); }
+  50% { transform: scale(.96); }
+  75% { transform: scale(1.02) rotate(1deg); }
+}
+
+/* ===== 색종이 confetti ===== */
+.confetti {
+  position: fixed; z-index: 300; top: -12px; pointer-events: none;
+  border-radius: 3px;
+  animation: confettifall linear forwards;
+}
+@keyframes confettifall {
+  to { transform: translateY(108vh) rotate(760deg); opacity: 0; }
+}
+
+/* ===== 결과 화면 3성 골드 배경 ===== */
+.result.star3 { background: linear-gradient(160deg, #78350f 0%, #b45309 50%, #92400e 100%); }
+.result.star3 .rescard { border-top-color: #fbbf24; }
+
+/* ===== 보스 분노 모드 (enemy HP ≤ 30%) ===== */
+#bwrap.rage::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 8;
+  background: rgba(239,68,68,.08);
+  animation: ragepulse 1s ease-in-out infinite;
+}
+@keyframes ragepulse { 0%,100% { opacity: .4; } 50% { opacity: 1; } }
+
+/* ===== 스네이크 월드 맵 ===== */
+.mapgrid { padding: 4px 0 6px; }
+.maprow {
+  display: flex; align-items: center;
+}
+.maprow.rev { flex-direction: row-reverse; }
+.maprow.end { justify-content: flex-end; }
+
+.wnode {
+  flex: 0 0 88px; background: #fff; border-radius: 18px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  border-top: 5px solid var(--wc); box-shadow: 0 5px 14px rgba(0,0,0,.2);
+  padding: 10px 6px 10px; min-height: 100px;
+  transition: transform .12s;
+}
+.wnode:not(.locked):active { transform: scale(.94); }
+.wnode.locked { opacity: .52; filter: grayscale(.65); }
+.wnode.perfect { box-shadow: 0 0 0 2.5px #fbbf24, 0 5px 18px rgba(251,191,36,.45); }
+.wn-emoji { font-size: 28px; }
+.wn-id { font-size: 10px; color: #94a3b8; font-weight: 800; margin-top: 2px; }
+.wn-name { font-size: 11px; color: #1e293b; font-weight: 800; text-align: center; line-height: 1.3; word-break: keep-all; }
+.wn-stars { font-size: 11px; color: #d97706; font-weight: 900; margin-top: 1px; }
+.wn-lock { font-size: 10px; color: #94a3b8; font-weight: 600; }
+
+.mapconn.h {
+  flex: 1; height: 5px; border-radius: 3px;
+  background: rgba(255,255,255,.18);
+}
+.mapconn.h.done {
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  box-shadow: 0 0 7px rgba(251,191,36,.55);
+}
+.maprow-gap { display: flex; height: 28px; }
+.maprow-gap.right { justify-content: flex-end; padding-right: 41px; }
+.maprow-gap.left  { justify-content: flex-start; padding-left: 41px; }
+.mapconn.v {
+  width: 5px; height: 100%; border-radius: 3px;
+  background: rgba(255,255,255,.18);
+}
+.mapconn.v.done {
+  background: linear-gradient(180deg, #fbbf24, #f59e0b);
+  box-shadow: 0 0 7px rgba(251,191,36,.55);
+}
+
 /* ===== 콤보 FEVER 보더 ===== */
 #bwrap.fever::after {
   content: "";

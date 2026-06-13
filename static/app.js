@@ -52,6 +52,31 @@
   const worldStars = (w) => [1, 2, 3, 4, 5].reduce((t, s) => t + starsOf(w, s), 0);
 
   // ---------- 이펙트 헬퍼 ----------
+  function spawnConfetti() {
+    const colors = ['#f59e0b','#f97316','#4ade80','#60a5fa','#c084fc','#fb7185','#fbbf24','#34d399'];
+    for (let i = 0; i < 52; i++) {
+      const el = document.createElement('div');
+      const size = 6 + Math.random() * 7;
+      el.className = 'confetti';
+      el.style.cssText = `left:${Math.random() * 100}vw;background:${colors[i % colors.length]};`
+        + `width:${size}px;height:${size}px;`
+        + `animation-delay:${Math.random() * 0.9}s;animation-duration:${1.8 + Math.random() * 0.9}s;`
+        + `transform:rotate(${Math.random() * 360}deg)`;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 3000);
+    }
+  }
+
+  function animateXpBar() {
+    const bar = document.querySelector('.xpbar i');
+    if (!bar) return;
+    const targetW = bar.style.width;
+    bar.style.cssText = 'width:0%;transition:none';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      bar.style.cssText = `width:${targetW};transition:width 0.95s cubic-bezier(0.34,1.1,0.64,1)`;
+    }));
+  }
+
   function spawnParts(target, emoji, n) {
     if (!target) return;
     const r = target.getBoundingClientRect();
@@ -157,25 +182,45 @@
     return false;
   }
 
-  // ---------- 화면: 월드 맵 ----------
+  // ---------- 화면: 월드 맵 (스네이크 경로) ----------
   function renderMap() {
-    const cards = MQ.WORLDS.map((w) => {
+    const W = MQ.WORLDS;
+
+    function wNode(w) {
       const open = worldUnlocked(w.id);
       const st = worldStars(w.id);
-      return `<button class="world ${open ? "" : "locked"}" style="--wc:${w.color}"
-        onclick="${open ? `UI.stages(${w.id})` : ""}">
-        <span class="wemoji">${open ? w.emoji : "🔒"}</span>
-        <span class="wname">World ${w.id}<br><b>${w.name}</b></span>
-        <span class="wstars">${open ? "★ " + st + "/15" : "이전 월드의 보스를 이겨봐!"}</span>
+      const perfect = st === 15;
+      return `<button class="wnode${open ? "" : " locked"}${perfect ? " perfect" : ""}"
+        style="--wc:${w.color}" onclick="${open ? `UI.stages(${w.id})` : ""}">
+        <span class="wn-emoji">${open ? w.emoji : "🔒"}</span>
+        <span class="wn-id">W${w.id}</span>
+        <b class="wn-name">${w.name}</b>
+        <span class="wn-stars">${open && st > 0 ? "★" + st : open ? "" : ""}</span>
       </button>`;
-    }).join("");
+    }
+    function hConn(toId) {
+      return `<div class="mapconn h${worldUnlocked(toId) ? " done" : ""}"></div>`;
+    }
+    function vGap(toId, side) {
+      return `<div class="maprow-gap ${side}"><div class="mapconn v${worldUnlocked(toId) ? " done" : ""}"></div></div>`;
+    }
+
     app().innerHTML = `${header()}
       <main class="scroll">
         <div id="dailyarea"></div>
         <h2 class="sect">🗺️ 수학의 대륙</h2>
-        <div class="worlds">${cards}</div>
+        <div class="mapgrid">
+          <div class="maprow">${wNode(W[0])}${hConn(2)}${wNode(W[1])}${hConn(3)}${wNode(W[2])}</div>
+          ${vGap(4,"right")}
+          <div class="maprow rev">${wNode(W[3])}${hConn(5)}${wNode(W[4])}${hConn(6)}${wNode(W[5])}</div>
+          ${vGap(7,"left")}
+          <div class="maprow">${wNode(W[6])}${hConn(8)}${wNode(W[7])}${hConn(9)}${wNode(W[8])}</div>
+          ${vGap(10,"right")}
+          <div class="maprow end">${wNode(W[9])}</div>
+        </div>
       </main>${nav("map")}`;
     loadDailyQuests();
+    animateXpBar();
   }
 
   async function loadDailyQuests() {
@@ -242,6 +287,7 @@
         </div>
         <div class="stages">${rows}</div>
       </main>${nav("map")}`;
+    animateXpBar();
   }
 
   function play(w, s) {
@@ -839,7 +885,7 @@
     const nextOpen = hasNext && stageUnlocked(w, s + 1);
     const worldDone = s === 5;
     app().innerHTML = `
-    <main class="result" style="--wc:${meta.color}">
+    <main class="result${stars === 3 ? " star3" : ""}" style="--wc:${meta.color}">
       <div class="rescard">
         <div class="resstars" id="resstars">${[1, 2, 3].map((i) =>
           `<span class="rstar ${i <= stars ? "on" : ""}" style="animation-delay:${i * 0.25}s">★</span>`).join("")}</div>
@@ -854,7 +900,13 @@
         <button class="big ghost" onclick="UI.go('map')">월드 맵</button>
       </div>
     </main>`;
-    setTimeout(() => spawnParts($("#resstars"), "🎉", stars >= 3 ? 14 : 8), 350);
+    // 별마다 파티클 터짐
+    [1, 2, 3].forEach((i) => {
+      if (i <= stars) {
+        setTimeout(() => spawnParts($(`.rstar:nth-child(${i})`), "⭐", 6), i * 250 + 300);
+      }
+    });
+    if (stars === 3) setTimeout(spawnConfetti, 650);
   }
 
   // ---------- 화면: 학생 대시보드 ----------
@@ -892,6 +944,7 @@
           `<span class="badge ${b.got ? "got" : ""}" title="${b.desc}">${b.icon}<br>${b.name}</span>`).join("")}</div>
         <button class="big ghost logout" onclick="UI.logout()">로그아웃</button>
       </main>${nav("dash")}`;
+    animateXpBar();
   }
   function computeBadges(totalStars, lv) {
     const anyClear = Object.keys(S.progress).length > 0;
