@@ -749,6 +749,30 @@ main { animation: pagein 0.18s ease-out; }
 .dq-done { font-size: 13px; font-weight: 800; color: #16a34a; flex-shrink: 0; }
 .dq-lock { font-size: 12px; color: #94a3b8; font-weight: 700; flex-shrink: 0; }
 
+/* ===== 사운드 설정 슬라이더 ===== */
+.snd-title { font-size: 17px; font-weight: 800; margin-bottom: 16px; color: #1e293b; }
+.snd-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 0; border-bottom: 1px solid rgba(0,0,0,.08);
+}
+.snd-row:last-child { border-bottom: none; }
+.snd-row label { font-size: 13px; font-weight: 700; flex: 0 0 62px; color: #334155; }
+.snd-slider {
+  flex: 1; -webkit-appearance: none; appearance: none;
+  height: 7px; border-radius: 4px; background: #e2e8f0; outline: none; cursor: pointer;
+}
+.snd-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  box-shadow: 0 2px 8px rgba(0,0,0,.22); cursor: pointer;
+}
+.snd-slider::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%; border: none;
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  box-shadow: 0 2px 8px rgba(0,0,0,.22); cursor: pointer;
+}
+.snd-val { font-size: 12px; font-weight: 800; color: #f97316; min-width: 36px; text-align: right; }
+
 /* ===== 랭킹 ===== */
 .rank-mycard {
   display: flex; align-items: center; gap: 10px;

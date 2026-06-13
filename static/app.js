@@ -139,7 +139,7 @@
         <div><b>${esc(u.nickname)}</b><div class="lv">Lv.${lv} · ${titleOf(lv)}</div></div></div>
       <div class="xpwrap"><div class="xpbar"><i style="width:${Math.min(100, (cur / 150) * 100)}%"></i></div>
         <span class="xptxt">${cur} / 150 XP · 💰 ${won(spendable())}</span></div>
-      <button class="mutebtn" onclick="UI.toggleMute()" title="사운드 ON/OFF">${Sound.isMuted() ? '🔇' : '🔊'}</button>
+      <button class="mutebtn" onclick="UI.soundSettings()" title="사운드 설정">${Sound.isMuted() ? '🔇' : '🔊'}</button>
     </header>`;
   }
   const starStr = (n) => "★".repeat(n) + "☆".repeat(3 - n);
@@ -181,6 +181,41 @@
       $("#autherr").textContent = e.message;
     }
     return false;
+  }
+
+  // ---------- 사운드 설정 모달 ----------
+  function showSoundSettings() {
+    Sound.unlock();
+    const bgmV = Math.round(Sound.getBgmVol() * 100);
+    const sfxV = Math.round(Sound.getSfxVol() * 100);
+    const m = modal(
+      `<h3 class="snd-title">🔊 사운드 설정</h3>
+       <div class="snd-row">
+         <label>🎵 BGM</label>
+         <input type="range" class="snd-slider" id="sl-bgm" min="0" max="100" value="${bgmV}">
+         <span class="snd-val" id="sv-bgm">${bgmV}%</span>
+       </div>
+       <div class="snd-row">
+         <label>🔔 효과음</label>
+         <input type="range" class="snd-slider" id="sl-sfx" min="0" max="100" value="${sfxV}">
+         <span class="snd-val" id="sv-sfx">${sfxV}%</span>
+       </div>`,
+      [
+        { label: Sound.isMuted() ? '🔊 소리 켜기' : '🔇 전체 음소거', cls: 'ghost',
+          fn: (back) => { Sound.toggleMute(); closeModal(back); showSoundSettings(); } },
+        { label: '닫기', cls: 'primary', fn: (back) => closeModal(back) },
+      ]
+    );
+    const slBgm = document.getElementById('sl-bgm');
+    const slSfx = document.getElementById('sl-sfx');
+    if (slBgm) slBgm.addEventListener('input', () => {
+      Sound.setBgmVol(slBgm.value / 100);
+      document.getElementById('sv-bgm').textContent = slBgm.value + '%';
+    });
+    if (slSfx) slSfx.addEventListener('input', () => {
+      Sound.setSfxVol(slSfx.value / 100);
+      document.getElementById('sv-sfx').textContent = slSfx.value + '%';
+    });
   }
 
   // ---------- 화면: 월드 맵 (스네이크 경로) ----------
@@ -1245,6 +1280,7 @@
     arrowNext, sieveNext, sieveTap, gearNext, iceNext, forestNext,
     desertNext, moonNext, rainbowTap, rainbowCombine, castlePick,
     toggleMute: () => Sound.toggleMute(),
+    soundSettings: showSoundSettings,
   };
   (async function boot() {
     Sound.startBgm('menu');  // 첫 사용자 제스처(클릭) 후 실제 재생 시작

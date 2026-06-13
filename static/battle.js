@@ -199,8 +199,8 @@
     if (this.cfg.isBoss) {
       var wrap = document.getElementById('bwrap');
       if (wrap) {
-        if (frac > 0 && frac <= 0.3) wrap.classList.add('rage');
-        else wrap.classList.remove('rage');
+        if (frac > 0 && frac <= 0.3) { wrap.classList.add('rage'); Sound.setBossRage(true); }
+        else { wrap.classList.remove('rage'); Sound.setBossRage(false); }
       }
     }
   };
@@ -211,6 +211,8 @@
     else this.tweens.add({ targets: this.playerBar.fill, scaleX: frac, duration: 350, ease: 'Cubic.out' });
   };
   BattleScene.prototype.setCombo = function (n) {
+    Sound.setCombo(n);
+    Sound.setFever(n >= 8);
     var label = '', color = '#fbbf24';
     if (n >= 8)      { label = '🌟 FEVER x' + n; color = '#e879f9'; }
     else if (n >= 5) { label = '⚡x' + n;         color = '#60a5fa'; }
@@ -401,6 +403,7 @@
     // DOM 클래스 정리
     var wrap = document.getElementById('bwrap');
     if (wrap) { wrap.classList.remove('fever'); wrap.classList.remove('rage'); }
+    Sound.setCombo(0); Sound.setFever(false); Sound.setBossRage(false);
     Sound.startBgm('menu');
     B = null;
   }
@@ -488,7 +491,7 @@
       gain = Math.round(gain);
       B.xp += gain;
       B.hp = Math.min(100, B.hp + 5);
-      Sound.play(B.combo >= 3 ? 'combo' : 'correct');
+      Sound.play(B.combo >= 3 ? 'combo' : (B.stage === 5 ? 'correctBoss' : 'correct'));
       if (scene) scene.shoot(bridge.worldMeta(B.world).emoji, function () {
         if (!scene) return;
         Sound.play('hit');
@@ -505,7 +508,7 @@
     var wrap = document.getElementById('bwrap');
     if (wrap) wrap.classList.remove('fever');
     B.hp -= 15;
-    Sound.play('wrong');
+    Sound.play(B.stage === 5 ? 'wrongBoss' : 'wrong');
     if (scene) scene.monsterAttack();
     updateHUD();
     if (B.hp <= 0) { setTimeout(failBattle, 650); return; }
