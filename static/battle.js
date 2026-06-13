@@ -155,8 +155,21 @@
     else this.tweens.add({ targets: this.playerBar.fill, scaleX: frac, duration: 350, ease: 'Cubic.out' });
   };
   BattleScene.prototype.setCombo = function (n) {
-    this.comboText.setText(n >= 2 ? '🔥x' + n : '');
-    if (n >= 2) { this.comboText.setScale(1.4); this.tweens.add({ targets: this.comboText, scale: 1, duration: 260, ease: 'Back.out' }); }
+    var label = '', color = '#fbbf24';
+    if (n >= 8)      { label = '🌟 FEVER x' + n; color = '#e879f9'; }
+    else if (n >= 5) { label = '⚡x' + n;         color = '#60a5fa'; }
+    else if (n >= 2) { label = '🔥x' + n;         color = '#fbbf24'; }
+    this.comboText.setText(label).setColor(color);
+    if (n >= 2) {
+      this.comboText.setScale(1.5);
+      this.tweens.add({ targets: this.comboText, scale: 1, duration: 300, ease: 'Back.out' });
+    }
+    // DOM 보더 이펙트
+    var wrap = document.getElementById('bwrap');
+    if (wrap) {
+      if (n >= 8) { wrap.classList.add('fever'); }
+      else        { wrap.classList.remove('fever'); }
+    }
   };
   BattleScene.prototype.setBossTimer = function (frac, danger, instant) {
     this._tFrac = frac = Math.max(0, Math.min(1, frac));
@@ -296,7 +309,7 @@
       qTotal: s === 5 ? 10 : 8,
       idx: 0, hp: 100,
       d: s === 2 ? 1 : s === 3 ? 2 : 3,
-      combo: 0, consecWrong: 0, consecRight: 0,
+      combo: 0, maxCombo: 0, consecWrong: 0, consecRight: 0,
       xp: 0, correct: 0, firstTry: 0, attempt: 0,
       start: Date.now(), timer: null, timeLeft: 0,
       quiz: s === 4 ? bridge.quizFor(w, 8) : null,
@@ -389,11 +402,14 @@
       B.correct++;
       if (firstTry) {
         B.firstTry++; B.consecRight++; B.consecWrong = 0; B.combo++;
+        if (B.combo > B.maxCombo) B.maxCombo = B.combo;
         if (B.consecRight >= 5) { B.d = Math.min(3, B.d + 1); B.consecRight = 0; }
       } else { B.combo = 0; }
       var gain = 10 * B.d;
       if (!firstTry) gain *= 0.7;
-      if (B.combo >= 3) gain *= 1.5;
+      if (B.combo >= 8)      gain *= 3.0;
+      else if (B.combo >= 5) gain *= 2.0;
+      else if (B.combo >= 3) gain *= 1.5;
       gain = Math.round(gain);
       B.xp += gain;
       B.hp = Math.min(100, B.hp + 5);
@@ -411,6 +427,8 @@
     // 오답
     if (btn) btn.classList.add('bad');
     B.combo = 0; B.consecRight = 0;
+    var wrap = document.getElementById('bwrap');
+    if (wrap) wrap.classList.remove('fever');
     B.hp -= 15;
     Sound.play('wrong');
     if (scene) scene.monsterAttack();
@@ -438,6 +456,8 @@
     Sound.play('timeout');
     lockChoices();
     B.combo = 0; B.consecRight = 0;
+    var wrap = document.getElementById('bwrap');
+    if (wrap) wrap.classList.remove('fever');
     B.hp -= 15;
     if (scene) scene.monsterAttack();
     updateHUD();
@@ -485,6 +505,7 @@
       world: w, stage: s, stars: stars, score: accPct, xp: xp,
       correct: B.correct, wrong: B.qTotal - B.correct,
       seconds: Math.min(3600, Math.round((Date.now() - B.start) / 1000)),
+      max_combo: B.maxCombo,
     };
     if (scene) scene.monsterDie();
     Sound.play(s === 5 ? 'worldClear' : 'clear');

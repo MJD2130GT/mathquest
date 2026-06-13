@@ -607,3 +607,59 @@ button { font-family: inherit; border: 0; cursor: pointer; }
 /* 5칸 하단 네비 대응 */
 .bottomnav .navbtn { font-size: 11px; }
 .bottomnav .nico { font-size: 20px; }
+
+/* ===== 콤보 FEVER 보더 ===== */
+#bwrap.fever::after {
+  content: "";
+  position: absolute; inset: 0; pointer-events: none; z-index: 9;
+  border: 3px solid #e879f9;
+  box-shadow: inset 0 0 28px rgba(232,121,249,.35), 0 0 22px rgba(232,121,249,.3);
+  animation: feverring .55s ease-in-out infinite;
+}
+@keyframes feverring {
+  0%,100% { opacity: .65; }
+  50%      { opacity: 1; }
+}
+
+/* ===== 레벨업 모달 ===== */
+.lvup-ovl .ovlcard { background: linear-gradient(160deg, #312e81, #4c1d95); color: #fff; }
+.lvup-badge { font-size: 56px; animation: lvbounce .7s cubic-bezier(.34,1.56,.64,1); display: block; }
+@keyframes lvbounce { from { transform: scale(0) rotate(-30deg); } }
+.lvup-title { font-size: 15px; font-weight: 800; opacity: .85; margin: 4px 0; letter-spacing: 1px; }
+.lvup-lv { font-size: 52px; font-weight: 900; color: #fbbf24; line-height: 1.1;
+  text-shadow: 0 0 18px rgba(251,191,36,.6); }
+.lvup-rank { font-size: 20px; font-weight: 800; margin: 8px 0 4px; }
+.lvup-ovl .ovlcard .big.primary { background: rgba(255,255,255,.2); border: 1.5px solid rgba(255,255,255,.4); color: #fff; margin-top: 18px; }
+
+/* ===== 일일 도전 카드 ===== */
+.daily-card {
+  background: rgba(255,255,255,.12); border-radius: 18px;
+  padding: 13px 14px; margin-bottom: 14px;
+  border: 1.5px solid rgba(255,255,255,.2);
+}
+.daily-card.all-done { background: rgba(251,191,36,.18); border-color: rgba(251,191,36,.5); }
+.daily-head {
+  color: #fff; font-size: 14px; font-weight: 800; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+}
+.dq-alldone { font-size: 12px; color: #fbbf24; font-weight: 900; margin-left: 4px; }
+.dq-row {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,.9); border-radius: 13px;
+  padding: 10px 12px; margin-bottom: 7px;
+}
+.dq-row:last-child { margin-bottom: 0; }
+.dq-row.claimed { opacity: .65; }
+.dq-icon { font-size: 22px; flex-shrink: 0; }
+.dq-info { flex: 1; min-width: 0; }
+.dq-info b { font-size: 13px; color: #1e293b; display: block; }
+.dq-info span { font-size: 11.5px; color: #64748b; }
+.dq-btn {
+  flex-shrink: 0; padding: 8px 13px; border-radius: 11px;
+  font-size: 13px; font-weight: 900; white-space: nowrap;
+  background: linear-gradient(135deg, #f59e0b, #f97316); color: #fff;
+  box-shadow: 0 3px 9px rgba(249,115,22,.4);
+}
+.dq-btn:active { transform: scale(.94); }
+.dq-done { font-size: 13px; font-weight: 800; color: #16a34a; flex-shrink: 0; }
+.dq-lock { font-size: 12px; color: #94a3b8; font-weight: 700; flex-shrink: 0; }

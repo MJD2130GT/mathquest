@@ -7,8 +7,19 @@
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
   const S = { user: null, progress: {}, stats: {} };
-  let B = null;       // 진행 중인 배틀 상태
-  let conceptT0 = 0;  // 개념 탐구 시작 시각
+  let B = null;
+  let conceptT0 = 0;
+  let pendingLevelUp = null;
+
+  // ---------- 칭호 ----------
+  const TITLES = [
+    [50, "수학 마왕 👑"],
+    [30, "수학 현자 🔮"],
+    [20, "방정식 기사 🛡️"],
+    [10, "연산 탐험가 ⚔️"],
+    [1,  "수학 새싹 🌱"],
+  ];
+  const titleOf = (lv) => (TITLES.find(([min]) => lv >= min) || TITLES[TITLES.length - 1])[1];
 
   // ---------- API ----------
   async function api(path, body) {
@@ -99,9 +110,9 @@
     const lv = levelOf(u.xp), cur = xpInLevel(u.xp);
     return `<header class="topbar">
       <div class="who"><span class="avatar">🦊</span>
-        <div><b>${esc(u.nickname)}</b><div class="lv">Lv.${lv} · 💰 ${won(spendable())}</div></div></div>
+        <div><b>${esc(u.nickname)}</b><div class="lv">Lv.${lv} · ${titleOf(lv)}</div></div></div>
       <div class="xpwrap"><div class="xpbar"><i style="width:${Math.min(100, (cur / 150) * 100)}%"></i></div>
-        <span class="xptxt">${cur} / 150 XP</span></div>
+        <span class="xptxt">${cur} / 150 XP · 💰 ${won(spendable())}</span></div>
       <button class="mutebtn" onclick="UI.toggleMute()" title="사운드 ON/OFF">${Sound.isMuted() ? '🔇' : '🔊'}</button>
     </header>`;
   }
@@ -160,9 +171,51 @@
     }).join("");
     app().innerHTML = `${header()}
       <main class="scroll">
+        <div id="dailyarea"></div>
         <h2 class="sect">🗺️ 수학의 대륙</h2>
         <div class="worlds">${cards}</div>
       </main>${nav("map")}`;
+    loadDailyQuests();
+  }
+
+  async function loadDailyQuests() {
+    const area = document.getElementById("dailyarea");
+    if (!area) return;
+    try {
+      const data = await api("daily");
+      const allClaimed = data.quests.every((q) => q.claimed);
+      const rows = data.quests.map((q) => {
+        const state = q.claimed ? "claimed" : q.done ? "ready" : "locked";
+        const btn = q.claimed
+          ? `<span class="dq-done">✅ 완료</span>`
+          : q.done
+            ? `<button class="dq-btn primary" onclick="UI.claimQuest(${q.slot})">+${q.reward} XP</button>`
+            : `<span class="dq-lock">미달성</span>`;
+        return `<div class="dq-row ${state}">
+          <span class="dq-icon">${q.icon}</span>
+          <div class="dq-info"><b>${esc(q.title)}</b><span>${esc(q.desc)}</span></div>
+          ${btn}
+        </div>`;
+      }).join("");
+      area.innerHTML = `
+        <div class="daily-card ${allClaimed ? "all-done" : ""}">
+          <div class="daily-head">📅 오늘의 도전${allClaimed ? " <span class='dq-alldone'>모두 완료! 🎉</span>" : ""}</div>
+          ${rows}
+        </div>`;
+    } catch (e) { /* 오프라인이면 숨김 */ }
+  }
+
+  async function claimQuest(slot) {
+    try {
+      const res = await api("daily/claim", { slot });
+      S.user.xp = res.xp;
+      Sound.play("combo");
+      spawnParts(document.getElementById("dailyarea"), "⭐", 10);
+      await loadDailyQuests();
+    } catch (e) {
+      modal(`<div class="big-emoji">😅</div><b>${esc(e.message)}</b>`,
+        [{ label: "확인", cls: "ghost", fn: (b) => closeModal(b) }]);
+    }
   }
 
   // ---------- 화면: 스테이지 선택 ----------
@@ -742,8 +795,23 @@
     gen: (world, d) => MQ.gen(world, d),
     quizFor: (world, n) => MQ.quizFor(world, n),
     worldMeta: (w) => MQ.WORLDS[w - 1],
-    submit: async (payload) => { try { await api("result", payload); await loadState(); } catch (e) { /* 오프라인 등 — 그냥 진행 */ } },
-    onWin: (w, s, stars, xp, accPct) => renderResult(w, s, stars, xp, accPct),
+    submit: async (payload) => {
+      try {
+        const oldLv = levelOf(S.user.xp);
+        await api("result", payload);
+        await loadState();
+        const newLv = levelOf(S.user.xp);
+        if (newLv > oldLv) pendingLevelUp = newLv;
+      } catch (e) { /* 오프라인 등 — 그냥 진행 */ }
+    },
+    onWin: (w, s, stars, xp, accPct) => {
+      renderResult(w, s, stars, xp, accPct);
+      if (pendingLevelUp != null) {
+        const lv = pendingLevelUp;
+        pendingLevelUp = null;
+        setTimeout(() => showLevelUpModal(lv), 1600);
+      }
+    },
     onLose: (w, s) => failBattle(w, s),
     onQuit: (w) => renderStages(w),
     onConcept: (w) => startConcept(w),
@@ -906,6 +974,19 @@
   }
   function closeModal(el) { if (el && el.parentNode) el.parentNode.removeChild(el); }
 
+  function showLevelUpModal(lv) {
+    Sound.play("worldClear");
+    const title = titleOf(lv);
+    const m = modal(
+      `<div class="lvup-badge">🎉</div>
+       <div class="lvup-title">레벨 업!</div>
+       <div class="lvup-lv">Lv. ${lv}</div>
+       <div class="lvup-rank">${title}</div>`,
+      [{ label: "계속 모험하기 ✨", cls: "primary", fn: (b) => closeModal(b) }]
+    );
+    m.classList.add("lvup-ovl");
+  }
+
   // ---------- 화면: 리워드 상점 ----------
   function itemCard(it, bal, owned) {
     const afford = bal >= it.cost;
@@ -1061,7 +1142,7 @@
 
   window.UI = {
     go, auth: renderAuth, submitAuth, stages: renderStages, play,
-    finishConcept, logout, buy, redeem,
+    finishConcept, logout, buy, redeem, claimQuest,
     arrowNext, sieveNext, sieveTap, gearNext, iceNext, forestNext,
     desertNext, moonNext, rainbowTap, rainbowCombine, castlePick,
     toggleMute: () => Sound.toggleMute(),

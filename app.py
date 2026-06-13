@@ -73,6 +73,20 @@ CREATE TABLE IF NOT EXISTS wallet (
     redeemed_at TEXT,
     voucher TEXT
 );
+CREATE TABLE IF NOT EXISTS daily_stat (
+    user_id INTEGER NOT NULL,
+    day TEXT NOT NULL,
+    correct INTEGER NOT NULL DEFAULT 0,
+    max_combo INTEGER NOT NULL DEFAULT 0,
+    stages_cleared INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, day)
+);
+CREATE TABLE IF NOT EXISTS daily_claim (
+    user_id INTEGER NOT NULL,
+    day TEXT NOT NULL,
+    slot INTEGER NOT NULL,
+    PRIMARY KEY (user_id, day, slot)
+);
 """
 
 
@@ -93,7 +107,6 @@ def close_db(exc):
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     conn.executescript(SCHEMA)
-    # 기존 DB 마이그레이션: users.spent 컬럼이 없으면 추가
     cols = [r[1] for r in conn.execute("PRAGMA table_info(users)").fetchall()]
     if "spent" not in cols:
         conn.execute("ALTER TABLE users ADD COLUMN spent INTEGER NOT NULL DEFAULT 0")
@@ -268,6 +281,7 @@ def result():
         correct = max(0, min(100, int(data.get("correct", 0))))
         wrong = max(0, min(100, int(data.get("wrong", 0))))
         seconds = max(0, min(3600, int(data.get("seconds", 0))))
+        max_combo = max(0, min(50, int(data.get("max_combo", 0))))
     except (KeyError, ValueError, TypeError):
         return err("잘못된 요청이에요.")
     if not (1 <= world <= 10 and 1 <= stage <= 5):
@@ -303,10 +317,94 @@ def result():
     conn.execute("UPDATE users SET xp=xp+? WHERE id=?", (xp_gain, uid))
     if seconds > 0:
         conn.execute("INSERT INTO playlog (user_id, day, seconds) VALUES (?,?,?)", (uid, today, seconds))
+
+    # 일일 통계 업데이트
+    cleared = 1 if stars > 0 else 0
+    conn.execute(
+        "INSERT INTO daily_stat (user_id, day, correct, max_combo, stages_cleared) VALUES (?,?,?,?,?)"
+        " ON CONFLICT(user_id, day) DO UPDATE SET"
+        " correct=correct+?, max_combo=MAX(max_combo,?), stages_cleared=stages_cleared+?",
+        (uid, today, correct, max_combo, cleared, correct, max_combo, cleared),
+    )
     conn.commit()
 
     xp = conn.execute("SELECT xp FROM users WHERE id=?", (uid,)).fetchone()["xp"]
     return jsonify({"ok": True, "xp": xp})
+
+
+# ---------- 일일 도전 ----------
+
+DAILY_QUESTS = [
+    {"slot": 1, "icon": "⚔️", "title": "오늘의 배틀", "desc": "배틀 스테이지 1회 완료", "reward": 50},
+    {"slot": 2, "icon": "⏱️", "title": "꾸준한 탐험가", "desc": "오늘 5분 이상 플레이", "reward": 30},
+    {"slot": 3, "icon": "🔥", "title": "콤보 마스터", "desc": "최대 콤보 🔥3 이상 달성", "reward": 40},
+]
+
+
+def _check_quest(conn, uid, today, slot):
+    ds = conn.execute(
+        "SELECT correct, max_combo, stages_cleared FROM daily_stat WHERE user_id=? AND day=?",
+        (uid, today),
+    ).fetchone()
+    if slot == 1:
+        return ds is not None and ds["stages_cleared"] >= 1
+    if slot == 2:
+        row = conn.execute(
+            "SELECT COALESCE(SUM(seconds),0) AS s FROM playlog WHERE user_id=? AND day=?",
+            (uid, today),
+        ).fetchone()
+        return row["s"] >= 300
+    if slot == 3:
+        return ds is not None and ds["max_combo"] >= 3
+    return False
+
+
+@app.get("/api/daily")
+def daily():
+    uid = current_uid()
+    if uid is None:
+        return err("로그인이 필요해요.", 401)
+    conn = db()
+    today = date.today().isoformat()
+    claimed = {r["slot"] for r in conn.execute(
+        "SELECT slot FROM daily_claim WHERE user_id=? AND day=?", (uid, today)
+    ).fetchall()}
+    quests = []
+    for q in DAILY_QUESTS:
+        done = _check_quest(conn, uid, today, q["slot"])
+        quests.append({**q, "done": done, "claimed": q["slot"] in claimed})
+    return jsonify({"quests": quests})
+
+
+@app.post("/api/daily/claim")
+def daily_claim():
+    uid = current_uid()
+    if uid is None:
+        return err("로그인이 필요해요.", 401)
+    data = request.get_json(force=True, silent=True) or {}
+    try:
+        slot = int(data["slot"])
+    except (KeyError, ValueError, TypeError):
+        return err("잘못된 요청이에요.")
+    quest = next((q for q in DAILY_QUESTS if q["slot"] == slot), None)
+    if quest is None:
+        return err("존재하지 않는 도전이에요.")
+    conn = db()
+    today = date.today().isoformat()
+    already = conn.execute(
+        "SELECT 1 FROM daily_claim WHERE user_id=? AND day=? AND slot=?", (uid, today, slot)
+    ).fetchone()
+    if already:
+        return err("이미 보상을 받았어요.")
+    if not _check_quest(conn, uid, today, slot):
+        return err("아직 달성하지 못했어요.")
+    conn.execute(
+        "INSERT INTO daily_claim (user_id, day, slot) VALUES (?,?,?)", (uid, today, slot)
+    )
+    conn.execute("UPDATE users SET xp=xp+? WHERE id=?", (quest["reward"], uid))
+    conn.commit()
+    xp = conn.execute("SELECT xp FROM users WHERE id=?", (uid,)).fetchone()["xp"]
+    return jsonify({"ok": True, "xp": xp, "reward": quest["reward"]})
 
 
 # ---------- 리워드 상점 / 지갑(워렛) ----------
