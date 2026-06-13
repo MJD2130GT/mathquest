@@ -4,6 +4,7 @@ html, body { height: 100%; }
 body {
   font-family: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
   background: linear-gradient(160deg, #312e81 0%, #4338ca 45%, #6d28d9 100%);
+  background-attachment: fixed;
   color: #1e293b;
   min-height: 100vh;
 }
