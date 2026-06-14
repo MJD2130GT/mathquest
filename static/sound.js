@@ -123,7 +123,11 @@ var Sound = (function () {
 
   /* ===== 효과음 정의 ===== */
   var S = {
-    click: function () { note(900, 'square', 0, 0.035, 0.07); },
+    click: function () {
+      note(880,  'sine', 0,    0.11,  0.15);  // A5 — 메인 벨 톤
+      note(1320, 'sine', 0,    0.055, 0.07);  // E6 — 5도 배음 shimmer
+      note(440,  'sine', 0,    0.07,  0.06);  // A4 — 저음 따뜻함
+    },
 
     // 정답 — 콤보에 따라 피치 상승
     correct: function () {
