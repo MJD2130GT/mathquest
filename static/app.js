@@ -1213,7 +1213,7 @@
     if (typeof gsap !== 'undefined') {
       const tl = gsap.timeline();
       // 모달 카드 spring 입장
-      tl.from('.lvup-ovl .ovlcard', { scale: 0.45, opacity: 0, duration: 0.5, ease: 'back.out(2)' })
+      tl.from('.lvup-ovl .ovlcard', { scale: 0.45, opacity: 0, duration: 0.5, ease: 'back.out(2)', clearProps: 'all' })
         // 배지 — 회전 폭발
         .from('.lvup-badge', { scale: 0, rotation: -220, duration: 0.7, ease: 'elastic.out(1, 0.45)' }, '-=0.1')
         // 레벨 숫자 — bounce

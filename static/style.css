@@ -718,11 +718,12 @@ button { font-family: inherit; border: 0; cursor: pointer; }
 }
 
 /* ===== 레벨업 모달 ===== */
-.lvup-ovl { background: rgba(15,10,50,.75); backdrop-filter: blur(6px); }
+.lvup-ovl { background: rgba(0,0,0,.7); backdrop-filter: blur(6px); }
 .lvup-ovl .ovlcard {
-  background: linear-gradient(155deg, #6d28d9 0%, #7c3aed 50%, #9333ea 100%);
-  color: #fff; animation: none;
-  box-shadow: 0 0 0 2px rgba(255,255,255,.35), 0 0 32px rgba(147,51,234,.6), 0 20px 48px rgba(0,0,0,.5);
+  background: #7c3aed;
+  background: linear-gradient(160deg, #5b21b6 0%, #7c3aed 45%, #a855f7 100%);
+  color: #fff; animation: none; opacity: 1;
+  box-shadow: 0 0 0 3px #c084fc, 0 0 40px rgba(168,85,247,.5), 0 20px 48px rgba(0,0,0,.55);
 }
 .lvup-badge { font-size: 56px; animation: lvbounce .7s cubic-bezier(.34,1.56,.64,1); display: block; }
 @keyframes lvbounce { from { transform: scale(0) rotate(-30deg); } }
