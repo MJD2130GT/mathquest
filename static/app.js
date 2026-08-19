@@ -22,16 +22,9 @@
   const titleOf = (lv) => (TITLES.find(([min]) => lv >= min) || TITLES[TITLES.length - 1])[1];
 
   // ---------- API ----------
+  // 서버 없이 브라우저(localStorage)에 저장합니다 — local-api.js 참고
   async function api(path, body) {
-    const res = await fetch("/api/" + path, {
-      method: body ? "POST" : "GET",
-      headers: { "Content-Type": "application/json" },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    let j = {};
-    try { j = await res.json(); } catch (e) { /* ignore */ }
-    if (!res.ok) { const e = new Error(j.error || "오류가 발생했어요."); e.status = res.status; throw e; }
-    return j;
+    return LocalAPI(path, body);
   }
   async function loadState() {
     const j = await api("state");
@@ -1094,6 +1087,11 @@
         <h3 class="sect2">🏅 배지</h3>
         <div class="badges">${badges.map((b) =>
           `<span class="badge ${b.got ? "got" : ""}" title="${b.desc}">${b.icon}<br>${b.name}</span>`).join("")}</div>
+        <h3 class="sect2">💾 기록 백업</h3>
+        <p class="hinttxt">기록은 이 기기의 브라우저에만 저장돼요. 가끔 백업 파일을 내려받아 두면
+          휴대폰을 바꾸거나 브라우저 기록을 지워도 되살릴 수 있어요.</p>
+        <button class="big ghost" onclick="UI.backupSave()">백업 파일 내려받기</button>
+        <button class="big ghost" onclick="UI.backupLoad()">백업 파일 불러오기</button>
         <button class="big ghost logout" onclick="UI.logout()">로그아웃</button>
       </main>${nav("dash")}`;
     animateXpBar();
@@ -1358,6 +1356,62 @@
         { label: "취소", cls: "ghost", fn: (back) => closeModal(back) }]);
   }
 
+  // ---------- 백업 ----------
+  function backupSave() {
+    try {
+      MQStore.download();
+      modal(`<div class="big-emoji">💾</div><b>백업 파일을 저장했어요</b>
+        <p class="hinttxt">다운로드 폴더에 있는 <b>mathquest-backup-…json</b> 파일을
+        클라우드나 메일에 보관해 두세요.</p>`,
+        [{ label: "확인", cls: "primary", fn: (b) => closeModal(b) }]);
+    } catch (e) {
+      modal(`<div class="big-emoji">😅</div><b>백업하지 못했어요</b>
+        <p class="hinttxt">${esc(e.message)}</p>`,
+        [{ label: "확인", cls: "ghost", fn: (b) => closeModal(b) }]);
+    }
+  }
+
+  function backupLoad() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json,.json";
+    input.style.display = "none";
+    document.body.appendChild(input);
+    input.onchange = () => {
+      const file = input.files && input.files[0];
+      document.body.removeChild(input);
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        modal(`<div class="big-emoji">⚠️</div><b>지금 기록을 백업으로 바꿀까요?</b>
+          <p class="hinttxt">이 기기에 저장된 <b>모든 프로필과 기록이 사라지고</b>
+          백업 파일의 내용으로 교체돼요. 되돌릴 수 없어요.</p>`,
+          [{ label: "불러오기", cls: "primary", fn: (back) => {
+              closeModal(back);
+              try {
+                MQStore.importJSON(String(reader.result));
+              } catch (e) {
+                modal(`<div class="big-emoji">😅</div><b>불러오지 못했어요</b>
+                  <p class="hinttxt">${esc(e.message)}</p>`,
+                  [{ label: "확인", cls: "ghost", fn: (b) => closeModal(b) }]);
+                return;
+              }
+              S.user = null;
+              modal(`<div class="big-emoji">🎉</div><b>기록을 되살렸어요</b>
+                <p class="hinttxt">다시 로그인해 주세요.</p>`,
+                [{ label: "확인", cls: "primary", fn: (b) => { closeModal(b); renderAuth("login"); } }]);
+            } },
+           { label: "취소", cls: "ghost", fn: (back) => closeModal(back) }]);
+      };
+      reader.onerror = () => {
+        modal(`<div class="big-emoji">😅</div><b>파일을 읽지 못했어요</b>`,
+          [{ label: "확인", cls: "ghost", fn: (b) => closeModal(b) }]);
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
   // ---------- 기타 ----------
   async function logout() {
     try { await api("logout", {}); } catch (e) { /* ignore */ }
@@ -1394,6 +1448,7 @@
   window.UI = {
     go, auth: renderAuth, submitAuth, stages: renderStages, play,
     finishConcept, logout, buy, redeem, claimQuest,
+    backupSave, backupLoad,
     arrowNext, sieveNext, sieveTap, gearNext, iceNext, forestNext,
     desertNext, moonNext, rainbowTap, rainbowCombine, castlePick,
     toggleMute: () => Sound.toggleMute(),

@@ -1,5 +1,7 @@
 mathquest.db
 .secret_key
+# 마이그레이션/백업 결과 — 비밀번호 해시가 들어 있으니 커밋하지 않습니다
+mathquest-backup-*.json
 __pycache__/
 *.pyc
 *.pyo
